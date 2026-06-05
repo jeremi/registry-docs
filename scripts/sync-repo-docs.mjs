@@ -17,7 +17,7 @@
 import { access, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
-import { dirname, join, normalize, relative, resolve } from 'node:path';
+import { dirname, join, normalize, posix, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import YAML from 'yaml';
 
@@ -55,13 +55,14 @@ async function isDir(path) {
 // Resolve a repo source: prefer the sibling checkout, otherwise shallow-clone
 // the remote at the pinned ref into the cache. Fail loudly if neither resolves.
 async function resolveSource(repoId, repo) {
-  const localPath = resolve(root, repo.local);
-  if (await isDir(localPath)) {
+  const localPath = repo.local ? resolve(root, repo.local) : null;
+  if (localPath && (await isDir(localPath))) {
     return { path: localPath, mode: 'local' };
   }
 
   if (!repo.remote || !repo.ref) {
-    fail(`${repoId}: no local checkout at ${repo.local} and no remote/ref to clone`);
+    const localHint = repo.local ? ` at ${repo.local}` : '';
+    fail(`${repoId}: no local checkout${localHint} and no remote/ref to clone`);
   }
 
   const cachePath = join(cacheRoot, repoId);
@@ -85,12 +86,12 @@ async function cloneAtRef(repoId, remote, ref, dest) {
 }
 
 function blobUrl(repo, repoRelPath) {
-  return `${repo.remote}/blob/${repo.ref}/${repoRelPath}`;
+  return `${repo.remote}/blob/${repo.ref}/${repoRelPath.replace(/\\/g, '/')}`;
 }
 
 function rawUrl(repo, repoRelPath) {
   const base = repo.remote.replace('github.com', 'raw.githubusercontent.com');
-  return `${base}/${repo.ref}/${repoRelPath}`;
+  return `${base}/${repo.ref}/${repoRelPath.replace(/\\/g, '/')}`;
 }
 
 // Build a lookup from a repo-relative source path (e.g. "docs/api.md") to its
@@ -139,7 +140,7 @@ function siteRoute(destSlug) {
 function relativeRoute(fromDest, toDest) {
   const fromDir = siteRoute(fromDest); // the page's own URL directory
   const target = siteRoute(toDest);
-  let rel = relative(fromDir, target);
+  let rel = posix.relative(fromDir, target);
   if (rel === '') return './';
   if (!rel.startsWith('.')) rel = `./${rel}`;
   // relative() drops the trailing slash; keep it for clean directory routes.
