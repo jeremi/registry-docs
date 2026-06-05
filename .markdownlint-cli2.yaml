@@ -34,3 +34,5 @@ ignores:
   - "src/data/generated/**"
   - ".research/**"
   - "docs/**"
+  # Pulled product docs are build artifacts; they are linted in their home repo.
+  - "src/content/docs/products/**"
