@@ -141,13 +141,9 @@ export default defineConfig({
       // the Products group already supply that context.
       //
       // "Get started" is the newcomer funnel: orient (Overview, Where to
-      // start, When to use), then act. The two cross-stack onboarding
-      // tutorials owned by this repo are ordered easy-first: "Your first
-      // call" is the minimal one-read/one-evaluate hello-world; "First run"
-      // is the full topology tour (smoke tests, narrated scenarios, SD-JWT
-      // issuance, cross-authority evaluation). It is deliberately not labeled
-      // "Tutorials" so that word belongs to each product's own scenario
-      // tutorials, which a newcomer reaches only after picking a product.
+      // start, When to use), then act. The registryctl tutorials are the
+      // first local adoption path. The Registry Lab pages remain the deeper
+      // stack tour once a reader wants the full multi-service topology.
       sidebar: [
         {
           label: 'Get started',
@@ -158,6 +154,9 @@ export default defineConfig({
             { label: 'Overview', link: '/' },
             { label: 'Where to start', slug: 'start/quickstart' },
             { label: 'When to use', slug: 'start/when-to-use' },
+            { label: 'Spreadsheet API', slug: 'tutorials/publish-spreadsheet-secured-registry-api' },
+            { label: 'Registry claim', slug: 'tutorials/verify-claim-registry-api' },
+            { label: 'Own API claim', slug: 'tutorials/verify-claim-own-api' },
             { label: 'Your first call', slug: 'start/your-first-call' },
             { label: 'First run', slug: 'tutorials/first-run-with-registry-lab' },
           ],
