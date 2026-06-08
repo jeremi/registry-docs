@@ -119,7 +119,7 @@ PASS metadata key can list datasets
 PASS metadata key cannot read rows
 PASS row read without Data-Purpose returns 400
 PASS row reader can read filtered records
-PASS authorized key can fetch runtime OpenAPI
+PASS anonymous caller can fetch runtime OpenAPI
 ```
 
 `registryctl` writes detailed results to:
@@ -211,15 +211,13 @@ The docs page opens at:
 http://127.0.0.1:4242/docs
 ```
 
-The docs shell is public.
-The runtime OpenAPI document it loads is protected and requires a bearer key.
+The tutorial config leaves the docs shell and runtime OpenAPI document public.
+Protected data routes still require a bearer key and the right scope.
 
 Fetch the runtime OpenAPI document directly:
 
 ```sh
-curl -sS \
-  -H "Authorization: Bearer $METADATA_READER_RAW" \
-  http://127.0.0.1:4242/openapi.json
+curl -sS http://127.0.0.1:4242/openapi.json
 ```
 
 ## Explore requests in Bruno

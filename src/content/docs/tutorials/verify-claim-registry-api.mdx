@@ -278,12 +278,11 @@ Open the Notary API surface:
 registryctl notary open
 ```
 
-The command prints the local OpenAPI URL and an authenticated curl example:
+The command prints the local API docs URL and raw OpenAPI JSON URL:
 
 ```text
-Notary OpenAPI: http://127.0.0.1:4255/openapi.json
-Use the generated local evaluator key:
-curl -H "x-api-key: $REGISTRY_NOTARY_TUTORIAL_EVALUATOR_RAW" http://127.0.0.1:4255/openapi.json
+Notary API docs: http://127.0.0.1:4255/docs
+OpenAPI JSON: http://127.0.0.1:4255/openapi.json
 ```
 
 ## Clean up

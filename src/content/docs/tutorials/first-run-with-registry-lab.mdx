@@ -104,7 +104,7 @@ than 100 checks, including:
 - Health and readiness endpoints (`/healthz`, `/ready`) on all three Relay instances.
 - Discovery endpoint (`/.well-known/evidence-service`) on the core Notary instances, with
   bearer-token and `x-api-key` coverage.
-- OpenAPI endpoints (`/openapi.json`) on the Relay and Notary instances.
+- API docs (`/docs`) and OpenAPI endpoints (`/openapi.json`) on the Relay and Notary instances without demo credentials.
 - Authorization scope-denial responses (`403` with `auth.scope_denied`) for out-of-scope
   credentials.
 - Positive row-read and aggregate-read responses on the social protection Relay.
