@@ -1,0 +1,367 @@
+---
+title: Configure authentication
+description: Choose API-key or OIDC authentication for Registry Relay and Registry Notary, assign scopes, keep secrets out of YAML, and verify the grant.
+status: current
+owner: registry-docs
+source_repos:
+  - registry-relay
+  - registry-notary
+  - registry-platform
+last_reviewed: "2026-06-24"
+doc_type: how-to
+locale: en
+standards_referenced: []
+---
+
+import QuickstartMeta from '../../../components/QuickstartMeta.astro';
+
+Use this guide when you need to configure how callers authenticate to Registry Relay or Registry
+Notary.
+You will choose one auth mode per service, assign least-privilege scopes, keep raw credentials out
+of YAML, separate caller credentials from source credentials, and verify both denied and allowed
+calls.
+
+<QuickstartMeta
+  outcome="A reviewed auth configuration pattern for Relay, Notary, or a Relay-backed Notary deployment."
+  time="About 20 minutes after the service config shape is known"
+  level="Operator, single-service or Relay-backed Notary"
+  prerequisites={['A Relay or Notary config file', 'Access to the service binary or container image', 'A place to store environment-backed secrets']}
+/>
+
+Registry Relay and Registry Notary already document their full auth blocks in product references.
+This guide gives the operator path through those references:
+
+- [Relay configuration](../../products/registry-relay/configuration/) for the full Relay `auth`
+  block, API-key generation, OIDC fields, and deployment posture findings.
+- [Relay client integration](../../products/registry-relay/client-integration/) for caller headers,
+  dataset scopes, purpose headers, discovery, and client error handling.
+- [Notary operator configuration reference](../../products/registry-notary/operator-config-reference/)
+  for Notary caller auth, source auth, OIDC mode, secrets, and deployment gates.
+- [Notary source and claim modeling](../../products/registry-notary/source-claim-modeling-guide/)
+  for claim scopes and source-binding boundaries.
+
+## Before you start
+
+You need:
+
+- The service config file you plan to review or edit.
+- The dataset ids, entity ids, claim ids, and operations the caller needs.
+- The service binary or container image, so you can generate or hash static credentials.
+- A secret store, deployment environment, or local env file for fingerprints, tokens, and audit
+  hash secrets.
+- An identity provider (IdP) registration when the deployment uses OpenID Connect (OIDC).
+
+Do not put raw API keys, bearer tokens, OAuth client secrets, private signing keys, or database URLs
+in YAML.
+Registry config files name environment variables or secret-store references; the values live outside
+the config.
+
+## Choose the auth mode
+
+Each running service uses one auth mode at startup.
+Do not mix static credentials and OIDC in the same service config.
+
+| Service | API-key mode | OIDC mode | Caller header |
+| --- | --- | --- | --- |
+| Registry Relay | Backend clients or service-to-service reads with operator-issued static keys | Resource-server deployments with JSON Web Token (JWT) access tokens from an external IdP | `Authorization: Bearer <key-or-jwt>` |
+| Registry Notary | Backend clients that evaluate claims or request issuance | Citizen, wallet, or self-attestation flows with a user-held token that identifies the subject | `x-api-key: <key>`, `Authorization: Bearer <token>`, or `Authorization: Bearer <jwt>` |
+
+Use API-key mode for local pilots, controlled machine clients, and first integrations when the
+operator can issue and rotate static credentials.
+Use OIDC mode when an identity provider already owns client registration, user sessions, token
+lifetime, and external role grants.
+
+For OIDC mode, map IdP roles or scopes into Registry scopes.
+Registry services still perform their own scope checks after token verification.
+
+## Design scopes first
+
+Write the scope plan before you mint credentials.
+Every credential gets the smallest scope set that satisfies one workflow.
+
+| Workflow | Relay scope | Notary scope |
+| --- | --- | --- |
+| Discover visible datasets and schemas | `<dataset_id>:metadata` | n/a |
+| Read entity records | `<dataset_id>:rows` | n/a |
+| Execute declared aggregates | `<dataset_id>:aggregate` | n/a |
+| Let Notary read Relay as a source | Relay source credential gets only the source entity's read scope | Notary caller gets the claim's `required_scope` |
+| Evaluate a claim | n/a | A claim-specific scope such as `<source_id>:evidence_verification` |
+| Issue a credential from an allowed claim | n/a | Claim scope plus `registry_notary:credential_issue` |
+| Admin or posture operations | Service scopes such as `registry_relay:admin` or `registry_relay:ops_read` | Service scopes such as `registry_notary:admin` or `registry_notary:ops_read` |
+
+Keep Relay scopes and Notary scopes separate.
+A Notary caller does not need the Relay key that Notary uses for source reads.
+That separation keeps caller authorization, source authorization, and audit trails reviewable.
+
+## Configure Relay API-key mode
+
+Use API-key mode when Relay will authenticate callers with operator-issued static keys.
+The YAML stores committed fingerprint references, not raw keys.
+
+```yaml
+auth:
+  mode: api_key
+  api_keys:
+    - id: program_system
+      fingerprint:
+        provider: env
+        name: PROGRAM_SYSTEM_API_KEY_HASH
+        commitment: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      scopes:
+        - social_registry:metadata
+        - social_registry:rows
+```
+
+Generate the raw key, fingerprint, and matching commitment with the Relay binary or container:
+
+```sh
+registry-relay generate-api-key --id program_system
+```
+
+The command emits this shape:
+
+```text
+api_key_id=program_system
+api_key=<send-this-raw-key-to-the-client>
+fingerprint=sha256:<store-this-in-the-secret-store>
+commitment=sha256:<paste-this-into-config>
+```
+
+Use the values this way:
+
+- Store `fingerprint` in the environment variable named by `fingerprint.name`.
+- Replace the zeroed example `commitment` with the emitted `commitment`.
+- Give the raw `api_key` only to the authorized client.
+- Send Relay API-key credentials as `Authorization: Bearer <api_key>`.
+
+When you rotate the key, rerun the command with the same `--id`, update the secret-store
+fingerprint, update the YAML commitment, and redeploy the service.
+
+## Configure Notary API-key mode
+
+Use Notary API-key mode when backend clients call Notary to evaluate claims, render results, or
+request issuance.
+The YAML has the same environment-backed fingerprint pattern.
+
+```yaml
+auth:
+  mode: api_key
+  api_keys:
+    - id: verifier_service
+      fingerprint:
+        provider: env
+        name: REGISTRY_NOTARY_API_KEY_HASH
+        commitment: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      scopes:
+        - civil_registry:evidence_verification
+        - registry_notary:credential_issue
+```
+
+Generate a Notary caller key and its fingerprint:
+
+```sh
+registry-notary hash-api-key --print-secret
+```
+
+The command emits this shape:
+
+```text
+api_key=<send-this-raw-key-to-the-client>
+hash=sha256:<store-this-in-the-secret-store>
+```
+
+Store `hash` in the environment variable named by `fingerprint.name`.
+Give the raw `api_key` only to the authorized caller.
+Notary static-credential callers can use `x-api-key: <api_key>` or
+`Authorization: Bearer <api_key>`.
+
+Use the [Notary operator configuration reference](../../products/registry-notary/operator-config-reference/)
+as the source of truth for the credential commitment field and the rest of the minimal machine
+config.
+Run `registry-notary doctor --config <path>` against the deployed config and environment before
+exposing the endpoint.
+
+## Configure OIDC mode
+
+Use OIDC mode when an external identity provider issues access tokens.
+The service validates token issuer, audience, algorithm, key material, and mapped scopes before
+serving protected routes.
+
+Relay OIDC config follows this shape:
+
+```yaml
+auth:
+  mode: oidc
+  oidc:
+    issuer: https://idp.example.gov
+    audiences:
+      - registry-relay
+    discovery_url: https://idp.example.gov/.well-known/openid-configuration
+    allowed_algorithms:
+      - RS256
+    scope_claim: scope
+    scope_map:
+      "role:social-registry-reader": "social_registry:rows"
+      "role:social-registry-catalog": "social_registry:metadata"
+    allowed_clients:
+      - registry-relay-client
+```
+
+Notary OIDC config follows the shared runtime conventions, with Notary-owned scope mapping:
+
+```yaml
+auth:
+  mode: oidc
+  oidc:
+    issuer: https://idp.example.gov
+    jwks_url: https://idp.example.gov/.well-known/jwks.json
+    audiences:
+      - registry-notary
+    allowed_algorithms:
+      - RS256
+    scope_claim: scope
+    scope_map:
+      "role:notary-verifier": "civil_registry:evidence_verification"
+      "role:notary-issuer": "registry_notary:credential_issue"
+    principal_claim: sub
+```
+
+For Notary OIDC mode, leave `auth.api_keys` and `auth.bearer_tokens` empty.
+For Relay OIDC mode, use the OIDC block instead of the API-key block.
+Do not accept ID tokens as API credentials unless the product reference explicitly documents that
+profile for the deployment.
+
+In production-facing deployments, keep `allowed_clients` narrow and use HTTPS issuer, discovery, and
+JWKS URLs.
+Loopback HTTP belongs only in local development configurations that explicitly enable the documented
+local-insecure option.
+
+## Separate Notary caller auth from source auth
+
+When Notary evaluates a claim from Relay data, there are two credentials:
+
+- The Notary caller credential, held by the verifier or program system calling Notary.
+- The Relay source credential, held only by Notary so it can read Relay as an upstream source.
+
+Register Notary as a Relay client with only the source scope the claim needs:
+
+```yaml
+auth:
+  mode: api_key
+  api_keys:
+    - id: notary_source
+      fingerprint:
+        provider: env
+        name: NOTARY_SOURCE_API_KEY_HASH
+        commitment: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      scopes:
+        - social_registry:rows
+```
+
+Generate the Relay source credential with the matching id:
+
+```sh
+registry-relay generate-api-key --id notary_source
+```
+
+Store the emitted fingerprint for Relay, paste the emitted commitment into the Relay config, and
+store the raw key in a location only the Notary deployment can read.
+In the Notary config, name that raw key with `token_env` on the source connection:
+
+```yaml
+evidence:
+  source_connections:
+    relay_instance:
+      base_url: https://relay.example.gov
+      token_env: RELAY_SOURCE_TOKEN
+  claims:
+    - id: person-is-registered
+      source_bindings:
+        social_registry:
+          connector: registry_data_api
+          connection: relay_instance
+          required_scope: social_registry:evidence_verification
+          dataset: social_registry
+          entity: person
+          lookup:
+            input: target.identifiers.individual_id
+            field: id
+            op: eq
+            cardinality: one
+```
+
+The caller needs the Notary `required_scope`.
+Notary needs the Relay source key.
+Those are separate grants and separate audit subjects.
+
+## Verify the grant
+
+Run the product doctor before exercising HTTP calls:
+
+```sh
+registry-notary doctor --config <path>
+```
+
+For Relay, use the product's documented validation path for the binary or the generated
+`registryctl doctor --format json` report when the deployment came from `registryctl`.
+
+Then verify each service with one denied request and one allowed request.
+For Relay:
+
+```sh
+curl -i https://relay.example.gov/v1/datasets
+```
+
+The anonymous call returns `401 Unauthorized`.
+
+```sh
+curl -i \
+  -H "Authorization: Bearer <raw-relay-key-or-jwt>" \
+  https://relay.example.gov/v1/datasets
+```
+
+The authorized call returns the datasets visible to that principal.
+
+For Notary:
+
+```sh
+curl -i https://notary.example.gov/v1/claims
+```
+
+The anonymous call returns `401 Unauthorized`.
+
+```sh
+curl -i \
+  -H "x-api-key: <raw-notary-key>" \
+  https://notary.example.gov/v1/claims
+```
+
+The authorized call returns the configured claim catalog for that principal.
+For OIDC callers, replace the `x-api-key` header with
+`Authorization: Bearer <jwt>`.
+
+Check that denied requests fail before source reads.
+A Relay `auth.scope_denied` or Notary claim-scope denial is the expected result when the credential
+is valid but lacks the required scope.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Resolution |
+| --- | --- | --- |
+| `401 Unauthorized` on every protected route | Missing, malformed, expired, or unknown credential | Check the header scheme, the env-backed fingerprint, or the OIDC token issuer, audience, algorithm, and JWKS |
+| `403 Forbidden` or `auth.scope_denied` | Credential is valid but lacks the route or claim scope | Add the narrow missing scope to the caller grant, rotate or remint the credential, and redeploy |
+| Relay startup fails on a missing secret | `fingerprint.name` points at an unset environment variable | Store the fingerprint in the named env var and restart |
+| Notary source reads fail | Notary caller auth works, but `token_env` is missing or the Relay source key lacks the source read scope | Set the source token env var and confirm the Relay `notary_source` key has only the needed source scope |
+| OIDC tokens authenticate but grant no access | External role names do not map to Registry scopes | Update `scope_claim`, `scope_map`, or the IdP role grant |
+| Runtime OpenAPI returns `401` | `/openapi.json` is auth-gated by default | Send the same credential used for protected API calls, or disable auth only for local testing or controlled tooling |
+
+## Next
+
+- [Deploy Relay and Notary standalone with your own data](../deploy-standalone-with-own-data/):
+  configure a full Relay-backed Notary example.
+- [Verify a claim with Registry Notary](../verify-claim-registry-api/): exercise Notary caller
+  auth, source auth, and claim evaluation in a local generated project.
+- [Registry Relay API](../../reference/apis/registry-relay/): review Relay auth behavior and route
+  boundaries.
+- [Registry Notary API](../../reference/apis/registry-notary/): review Notary auth behavior and route
+  boundaries.
