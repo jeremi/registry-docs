@@ -279,11 +279,11 @@
     "evidence_docs": [
       {
         "label": "Registry Manifest codelist renderer",
-        "url": "https://github.com/jeremi/registry-manifest/blob/52da5e913d8652e98ce8e443102c5d23b1a0974f/crates/registry-manifest-core/src/lib.rs"
+        "url": "https://github.com/jeremi/registry-manifest/blob/431ebef0cb3f8bfe1c7bcf7f10ae790326a64403/crates/registry-manifest-core/src/lib.rs"
       },
       {
         "label": "Registry Manifest codelist tests",
-        "url": "https://github.com/jeremi/registry-manifest/blob/52da5e913d8652e98ce8e443102c5d23b1a0974f/crates/registry-manifest-core/tests/metadata_core.rs"
+        "url": "https://github.com/jeremi/registry-manifest/blob/431ebef0cb3f8bfe1c7bcf7f10ae790326a64403/crates/registry-manifest-core/tests/metadata_core.rs"
       }
     ],
     "last_checked": "2026-06-20",
@@ -503,11 +503,11 @@
       },
       {
         "label": "Registry Platform PDP ODRL enforcement profile constants",
-        "url": "https://github.com/jeremi/registry-platform/blob/88d1a798043673dac30d809d87badb083c6e1a26/crates/registry-platform-pdp/src/lib.rs"
+        "url": "https://github.com/jeremi/registry-platform/blob/c7a8c458c0a939eecc309fed1d35d5e32126927b/crates/registry-platform-pdp/src/lib.rs"
       },
       {
         "label": "Registry Relay governed evidence PDP path",
-        "url": "https://github.com/jeremi/registry-relay/blob/917e8064b62b8f86f35425a61fe66d3a4b5db921/src/api/governed.rs"
+        "url": "https://github.com/jeremi/registry-relay/blob/6370e92468349ae7e7a95d508a02871c0fca2ce1/src/api/governed.rs"
       }
     ],
     "last_checked": "2026-06-20",
