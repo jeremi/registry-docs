@@ -222,6 +222,7 @@ export default defineConfig({
           items: [
             { label: 'Publish a spreadsheet', slug: 'tutorials/publish-spreadsheet-secured-registry-api' },
             { label: 'Verify a claim', slug: 'tutorials/verify-claim-registry-api' },
+            { label: 'Configure auth', slug: 'tutorials/configure-authentication' },
             { label: 'OpenCRVS claims', slug: 'tutorials/verify-opencrvs-claims' },
             { label: 'Deploy with own data', slug: 'tutorials/deploy-standalone-with-own-data' },
             { label: 'Run the lab', slug: 'tutorials/first-run-with-registry-lab' },
