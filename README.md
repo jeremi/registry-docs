@@ -2,12 +2,15 @@
 
 **Moved:** Active development has moved to the public monorepo:
 [`registrystack/registry-stack`](https://github.com/registrystack/registry-stack).
-This repository is kept for pre-monorepo history and release tags. Use the
-monorepo for new issues, pull requests, and releases.
 
-Monorepo path: `docs/site/`.
+This repository is retained for pre-monorepo history and release tags. File new
+issues and pull requests in the monorepo.
 
-> **Experimental:** This codebase is under active development. Its APIs are evolving quickly and may be unstable.
+Current source at monorepo ref `ab5a1d46df8715539f15d398804611e8ca9c52d9`:
+
+- [`docs/site/`](https://github.com/registrystack/registry-stack/tree/ab5a1d46df8715539f15d398804611e8ca9c52d9/docs/site)
+
+**Legacy status:** Current documentation development happens in the monorepo.
 
 Registry Docs is the canonical documentation website for the registry project
 family.
