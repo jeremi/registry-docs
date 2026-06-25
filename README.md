@@ -1,5 +1,12 @@
 # Registry Docs
 
+> **Moved:** Active development has moved to the public monorepo:
+> [`registrystack/registry-stack`](https://github.com/registrystack/registry-stack).
+> This repository is kept for pre-monorepo history and release tags. Use the
+> monorepo for new issues, pull requests, and releases.
+>
+> Monorepo path: `docs/site/`.
+
 > **Experimental:** This codebase is under active development. Its APIs are evolving quickly and may be unstable.
 
 Registry Docs is the canonical documentation website for the registry project
