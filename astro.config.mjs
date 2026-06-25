@@ -266,6 +266,8 @@ export default defineConfig({
             { label: 'Contracts', slug: 'reference/contracts' },
             { label: 'Standards', slug: 'reference/standards' },
             { label: 'ITB and SEMIC evidence', slug: 'reference/itb-semic-evidence' },
+            { label: 'OpenSSF evidence', slug: 'reference/openssf-evidence' },
+            { label: 'Security self-assessment', slug: 'reference/security-self-assessment' },
             { label: 'Glossary', slug: 'reference/glossary' },
           ],
         },
